@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="format-detection" content="telephone=no">
+<title>全能网页爬虫工具</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", "Segoe UI", Roboto, sans-serif;
+    background: #f5f7fa; color: #1f2937; min-height: 100vh;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 16px 40px; }
+  h1 { font-size: 24px; margin-bottom: 6px; }
+  .sub { color: #6b7280; font-size: 14px; margin-bottom: 22px; line-height: 1.7; }
+  .card {
+    background: #fff; border-radius: 12px; padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px;
+  }
+  /* 用负外边距代替 flex gap，兼容未更新系统 WebView 的旧手机（Chrome 84 以下不支持 flex gap） */
+  form { display: flex; flex-wrap: wrap; margin: -5px; }
+  form > * { margin: 5px; }
+  input[type=text], input[type=number] {
+    flex: 1; min-width: 200px; padding: 12px 14px; background: #fff; color: #1f2937;
+    border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px; outline: none;
+    font-family: inherit; -webkit-appearance: none;
+  }
+  input[type=text]:focus, input[type=number]:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+  button {
+    padding: 12px 26px; background: #2563eb; color: #fff; border: 0;
+    border-radius: 8px; font-size: 15px; cursor: pointer; font-family: inherit;
+  }
+  button:active { background: #1d4ed8; }
+  button:disabled { background: #93c5fd; cursor: not-allowed; }
+  .hint { color: #9ca3af; font-size: 13px; margin-top: 10px; line-height: 1.6; }
+  .error {
+    display: none; margin-top: 12px; padding: 10px 12px; border-radius: 8px;
+    background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 14px; line-height: 1.6;
+    word-break: break-all;
+  }
+  details { margin-top: 14px; border-top: 1px solid #f1f5f9; padding-top: 12px; }
+  summary { color: #4b5563; font-size: 14px; cursor: pointer; outline: none; }
+  .settings { display: flex; flex-wrap: wrap; margin: 6px -6px -6px; }
+  .settings label { margin: 6px; }
+  .settings label { flex: 1 1 140px; display: block; font-size: 13px; color: #4b5563; }
+  .settings label span { display: block; margin-bottom: 6px; }
+  .settings input[type=number] { width: 100%; min-width: 0; padding: 10px 12px; font-size: 15px; }
+  .btn-light { background: #eef2ff; color: #1d4ed8; padding: 9px 16px; font-size: 14px; }
+  .btn-light:active { background: #e0e7ff; }
+  .btn-light:disabled { background: #f1f5f9; color: #94a3b8; }
+  .btn-danger { background: #fff; color: #dc2626; border: 1px solid #fecaca; padding: 9px 20px; font-size: 14px; }
+  .btn-danger:active { background: #fef2f2; }
+  .btn-danger:disabled { background: #fff; color: #fca5a5; }
+  #status { display: none; }
+  .status-head { display: flex; align-items: center; color: #4b5563; font-size: 14px; }
+  .status-head .spinner { margin-right: 12px; }
+  .status-head span { flex: 1; word-break: break-all; line-height: 1.6; }
+  .spinner {
+    width: 18px; height: 18px; border: 3px solid #dbeafe;
+    border-top-color: #2563eb; border-radius: 50%;
+    -webkit-animation: spin .8s linear infinite; animation: spin .8s linear infinite; flex-shrink: 0;
+  }
+  @-webkit-keyframes spin { to { -webkit-transform: rotate(360deg); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .grid { display: flex; margin: 12px -4px 8px; }
+  .grid div { flex: 1; margin: 4px; background: #f8fafc; border-radius: 8px; padding: 10px 4px; text-align: center; }
+  .grid b { display: block; font-size: 18px; color: #1f2937; }
+  .grid small { font-size: 12px; color: #6b7280; }
+  .current {
+    font-size: 12px; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 14px; font-family: monospace;
+  }
+  h2 { font-size: 16px; margin-bottom: 12px; }
+  pre {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: 14px; font-size: 13px; line-height: 1.7;
+    max-height: 380px; overflow: auto; white-space: pre-wrap; word-break: break-all;
+    -webkit-overflow-scrolling: touch;
+  }
+  .actions { display: flex; flex-wrap: wrap; margin: 3px -5px -5px; }
+  .actions > * { margin: 5px; }
+  .dl-btn { background: #059669; color: #fff; padding: 12px 26px; font-size: 15px; }
+  .dl-btn:active { background: #047857; }
+  .dl-btn:disabled { background: #6ee7b7; }
+  .share-btn { background: #fff; color: #059669; border: 1px solid #a7f3d0; padding: 12px 22px; }
+  .share-btn:active { background: #ecfdf5; }
+  .ok { color: #059669; font-size: 14px; margin-bottom: 10px; line-height: 1.7; word-break: break-all; }
+  .warn { color: #b45309; font-size: 14px; margin-bottom: 10px; line-height: 1.7; }
+  .msg { display: none; margin-top: 12px; font-size: 13px; line-height: 1.6; word-break: break-all; }
+  .msg.good { color: #059669; }
+  .msg.bad { color: #dc2626; }
+  .note { color: #9ca3af; font-size: 12px; margin-top: 8px; }
+  @media (max-width: 480px) {
+    form button { flex: 1 1 100%; }
+    .actions button { flex: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>全能网页爬虫工具</h1>
+  <div class="sub">输入网址后点击「开始爬取」：手机直接抓取整站文件（HTML / CSS / JS 深层检索），爬完后将第一级域名文件夹（如 example.com）打包成 .zip，可保存到手机或分享，同时展示「所有下载文件列表.txt」和「下载统计.txt」的内容。</div>
+
+  <div class="card">
+    <form id="crawlForm" autocomplete="off">
+      <input type="text" id="urlInput" placeholder="请输入网址，例如 example.com"
+             inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go">
+      <button type="submit" id="btn">开始爬取</button>
+    </form>
+    <div class="hint">无需手动加 http(s)，直接输入域名即可。网站越大耗时越长，爬取时可切到后台，通知栏会显示进度。</div>
+    <div class="error" id="errorBox"></div>
+    <details id="advanced">
+      <summary>高级设置</summary>
+      <div class="settings">
+        <label><span>最多下载文件数（0 = 不限）</span><input type="number" id="setMaxFiles" min="0" step="1" inputmode="numeric"></label>
+        <label><span>最长运行时间（秒，0 = 不限）</span><input type="number" id="setMaxRuntime" min="0" step="1" inputmode="numeric"></label>
+        <label><span>单个请求超时（秒）</span><input type="number" id="setTimeout" min="1" step="1" inputmode="numeric"></label>
+        <label><span>单个网址最多请求次数</span><input type="number" id="setRetries" min="1" max="10" step="1" inputmode="numeric"></label>
+      </div>
+      <div class="actions"><button type="button" class="btn-light" id="resetBtn">恢复默认</button></div>
+    </details>
+  </div>
+
+  <div class="card" id="status">
+    <div class="status-head">
+      <div class="spinner"></div>
+      <span id="statusText">正在爬取，请稍候…</span>
+    </div>
+    <div class="grid">
+      <div><b id="pDownloaded">0</b><small>已下载</small></div>
+      <div><b id="pFailed">0</b><small>失败</small></div>
+      <div><b id="pQueue">0</b><small>待处理</small></div>
+      <div><b id="pElapsed">0:00</b><small>已用时</small></div>
+    </div>
+    <div class="current" id="pCurrent"></div>
+    <button type="button" class="btn-danger" id="stopBtn">停止爬取</button>
+    <div class="note">停止后，已下载的文件仍会生成记录并打包。</div>
+  </div>
+
+  <div id="result" style="display:none">
+    <div class="card">
+      <h2 id="resultTitle">爬取完成</h2>
+      <div class="warn" id="stopNote" style="display:none"></div>
+      <div class="ok" id="summary"></div>
+      <div class="actions">
+        <button type="button" class="dl-btn" id="saveBtn">保存 zip 到手机</button>
+        <button type="button" class="share-btn" id="shareBtn">分享</button>
+      </div>
+      <div class="msg" id="saveMsg"></div>
+      <div class="note">App 只保留最近一次的压缩包，开始新的爬取前请先保存或分享。</div>
+    </div>
+    <div class="card">
+      <h2>下载统计</h2>
+      <pre id="stats"></pre>
+    </div>
+    <div class="card">
+      <h2>所有下载文件列表</h2>
+      <pre id="fileList"></pre>
+    </div>
+    <div class="card" id="failCard" style="display:none">
+      <h2>下载失败记录</h2>
+      <pre id="failList"></pre>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var MAX_LINES = 2000;
+  var bridge = window.Android;
+  var $ = function (id) { return document.getElementById(id); };
+
+  var form = $('crawlForm');
+  var input = $('urlInput');
+  var btn = $('btn');
+  var errorBox = $('errorBox');
+  var statusBox = $('status');
+  var statusText = $('statusText');
+  var stopBtn = $('stopBtn');
+  var resultBox = $('result');
+  var saveBtn = $('saveBtn');
+  var shareBtn = $('shareBtn');
+  var saveMsg = $('saveMsg');
+
+  var settingInputs = {
+    maxFiles: $('setMaxFiles'),
+    maxRuntime: $('setMaxRuntime'),
+    timeout: $('setTimeout'),
+    retries: $('setRetries')
+  };
+  var defaults = { maxFiles: 0, maxRuntime: 0, timeout: 20, retries: 3 };
+
+  var running = false;
+  var elapsedBase = 0;
+  var elapsedAt = 0;
+  var timer = null;
+
+  function parseJson(s, fallback) {
+    try { return JSON.parse(s); } catch (e) { return fallback; }
+  }
+
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.style.display = 'block';
+  }
+
+  function hideError() {
+    errorBox.style.display = 'none';
+  }
+
+  function fillSettings(values) {
+    for (var k in settingInputs) {
+      if (settingInputs.hasOwnProperty(k)) {
+        settingInputs[k].value = values[k] !== undefined ? values[k] : defaults[k];
+      }
+    }
+  }
+
+  function readSettings() {
+    var out = {};
+    for (var k in settingInputs) {
+      if (settingInputs.hasOwnProperty(k)) {
+        var v = parseInt(settingInputs[k].value, 10);
+        out[k] = isNaN(v) ? defaults[k] : v;
+      }
+    }
+    return out;
+  }
+
+  function formatDuration(ms) {
+    var s = Math.max(0, Math.floor(ms / 1000));
+    var h = Math.floor(s / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var sec = s % 60;
+    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    return h > 0 ? h + ':' + pad(m) + ':' + pad(sec) : m + ':' + pad(sec);
+  }
+
+  function formatDurationText(ms) {
+    var s = Math.max(0, Math.round(ms / 1000));
+    if (s < 60) return s + ' 秒';
+    var h = Math.floor(s / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var sec = s % 60;
+    return (h > 0 ? h + ' 小时 ' : '') + m + ' 分' + (h > 0 ? '' : ' ' + sec + ' 秒');
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+  }
+
+  function limitLines(text, note) {
+    if (!text) return '';
+    var count = 0;
+    var idx = -1;
+    while (count < MAX_LINES) {
+      idx = text.indexOf('\n', idx + 1);
+      if (idx < 0) return text;
+      count++;
+    }
+    if (idx >= text.length - 1) return text;
+    var total = text.split('\n').length - (text.charAt(text.length - 1) === '\n' ? 1 : 0);
+    return text.slice(0, idx + 1) + '\n…… 仅显示前 ' + MAX_LINES + ' 行（共 ' + total + ' 行）' + note;
+  }
+
+  function tick() {
+    $('pElapsed').textContent = formatDuration(elapsedBase + (Date.now() - elapsedAt));
+  }
+
+  function setRunning(on) {
+    running = on;
+    btn.disabled = on;
+    btn.textContent = on ? '正在爬取…' : '开始爬取';
+    statusBox.style.display = on ? 'block' : 'none';
+    if (on) {
+      if (!timer) timer = setInterval(tick, 1000);
+    } else if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+  }
+
+  function renderProgress(p) {
+    if (!running) {
+      setRunning(true);
+      resultBox.style.display = 'none';
+    }
+    var host = p.host || '';
+    if (p.phase === 'zipping') {
+      statusText.textContent = '正在把 ' + host + ' 打包为 zip 压缩包…';
+    } else if (p.stopping) {
+      statusText.textContent = '正在停止，稍后会打包已下载的文件…';
+    } else {
+      statusText.textContent = '正在爬取 ' + host + ' …';
+    }
+    stopBtn.disabled = !!p.stopping || p.phase === 'zipping';
+    stopBtn.textContent = p.stopping ? '正在停止…' : '停止爬取';
+    $('pDownloaded').textContent = p.downloadCount || 0;
+    $('pFailed').textContent = p.failCount || 0;
+    $('pQueue').textContent = p.queueRemaining || 0;
+    $('pCurrent').textContent = p.currentUrl || '';
+    elapsedBase = p.elapsedMs || 0;
+    elapsedAt = Date.now();
+    tick();
+  }
+
+  function showResult(r, scroll) {
+    setRunning(false);
+    saveMsg.style.display = 'none';
+    if (!r.success) {
+      resultBox.style.display = 'none';
+      showError('爬取过程中出错：' + (r.error || '未知错误'));
+      return;
+    }
+    hideError();
+
+    var notes = {
+      user: '已按要求停止爬取，下面是停止前已下载的内容。',
+      maxFiles: '已达到「最多下载文件数」上限，爬取已自动停止。',
+      maxRuntime: '已达到「最长运行时间」上限，爬取已自动停止。',
+      lowStorage: '手机剩余存储空间不足，爬取已自动停止。'
+    };
+    var note = notes[r.stopReason] || '';
+    $('resultTitle').textContent = r.stopReason === 'user' ? '爬取已停止' : '爬取完成';
+    $('stopNote').textContent = note;
+    $('stopNote').style.display = note ? 'block' : 'none';
+
+    $('summary').textContent =
+      '共下载 ' + r.downloadCount + ' 个文件' +
+      (r.failCount ? '，失败 ' + r.failCount + ' 个（见下方「下载失败记录」）' : '') +
+      '，已打包为 ' + r.zipName + '（' + formatSize(r.zipSize || 0) + '），' +
+      '用时 ' + formatDurationText(r.elapsedMs || 0) + '，域名文件夹已自动清理（仅保留压缩包）';
+    $('stats').textContent = r.stats || '';
+    $('fileList').textContent = limitLines(r.fileList, '，完整列表见压缩包内「所有下载文件列表.txt」');
+    if (r.failCount) {
+      $('failList').textContent = limitLines(r.failList, '');
+      $('failCard').style.display = 'block';
+    } else {
+      $('failCard').style.display = 'none';
+    }
+    saveBtn.disabled = false;
+    resultBox.style.display = 'block';
+    if (scroll && resultBox.scrollIntoView) resultBox.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function loadState(scroll) {
+    var st = parseJson(bridge.getState(), { state: 'idle' });
+    if (st.state === 'running') {
+      renderProgress(st.progress || {});
+    } else if (st.state === 'done') {
+      showResult(st.result || {}, scroll);
+    } else {
+      setRunning(false);
+    }
+  }
+
+  // ===== 原生回调 =====
+  window.onCrawlProgress = function (p) { renderProgress(p || {}); };
+  window.onCrawlFinished = function () { loadState(true); };
+  window.onSaveResult = function (r) {
+    saveBtn.disabled = false;
+    saveMsg.textContent = r.message;
+    saveMsg.className = 'msg ' + (r.ok ? 'good' : 'bad');
+    saveMsg.style.display = 'block';
+  };
+  window.setSharedUrl = function (url) {
+    input.value = url;
+    hideError();
+  };
+
+  if (!bridge) {
+    btn.disabled = true;
+    showError('此页面需要在「网页爬虫」App 内运行。');
+    fillSettings(defaults);
+    return;
+  }
+
+  // ===== 初始化 =====
+  var settings = parseJson(bridge.getSettings(), {});
+  if (settings.defaults) defaults = settings.defaults;
+  fillSettings(settings.current || defaults);
+  if (settings.lastUrl && !input.value) input.value = settings.lastUrl;
+  loadState(false);
+
+  $('resetBtn').addEventListener('click', function () { fillSettings(defaults); });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (running) return;
+    var url = input.value.trim();
+    if (!url) {
+      showError('请先输入要爬取的网址');
+      return;
+    }
+    input.blur();
+    var r = parseJson(bridge.start(url, JSON.stringify(readSettings())), { ok: false, error: '启动失败' });
+    if (!r.ok) {
+      showError(r.error || '启动失败');
+      return;
+    }
+    hideError();
+    resultBox.style.display = 'none';
+    $('advanced').open = false;
+    renderProgress({ host: url.replace(/^https?:\/\//i, '').split(/[\/?#]/)[0], elapsedMs: 0 });
+    if (statusBox.scrollIntoView) statusBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  stopBtn.addEventListener('click', function () {
+    stopBtn.disabled = true;
+    stopBtn.textContent = '正在停止…';
+    statusText.textContent = '正在停止，稍后会打包已下载的文件…';
+    bridge.stop();
+  });
+
+  saveBtn.addEventListener('click', function () {
+    saveBtn.disabled = true;
+    saveMsg.style.display = 'none';
+    bridge.saveZip();
+  });
+
+  shareBtn.addEventListener('click', function () { bridge.shareZip(); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+plugins {
+    id 'com.android.application'
+}
+
+// 签名配置从项目根目录的 keystore.properties 读取（不存在时 release 包不签名）
+def keystorePropsFile = rootProject.file('keystore.properties')
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+
+android {
+    namespace = 'com.webcrawler.tool'
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = 'com.webcrawler.tool'
+        minSdk = 21
+        targetSdk = 36
+        versionCode = 1
+        versionName = '1.0.0'
+    }
+
+    signingConfigs {
+        release {
+            if (keystorePropsFile.exists()) {
+                storeFile = rootProject.file(keystoreProps['storeFile'])
+                storePassword = keystoreProps['storePassword']
+                keyAlias = keystoreProps['keyAlias']
+                keyPassword = keystoreProps['keyPassword']
+                enableV1Signing = true   // 兼容 Android 5.0 - 6.0
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled = true
+            shrinkResources = true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            vcsInfo.include = false
+            if (keystorePropsFile.exists()) {
+                signingConfig = signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+        encoding = 'UTF-8'
+    }
+
+    buildFeatures {
+        buildConfig = false
+    }
+
+    // 不把依赖信息块写入 APK（减小体积）
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/**/*.version', 'META-INF/*.kotlin_module', 'kotlin/**', 'DebugProbesKt.bin']
+        }
+    }
+
+    lint {
+        checkReleaseBuilds = true
+        abortOnError = true
+        // 以下为有意为之：WebView 界面需要 JS 桥；与原 PHP 版（CURLOPT_SSL_VERIFYPEER=false）一致，
+        // 爬取时不校验 HTTPS 证书，以便抓取证书过期 / 自签名的网站
+        disable += ['SetJavaScriptEnabled', 'AddJavascriptInterface', 'TrustAllX509TrustManager',
+                    'BadHostnameVerifier', 'CustomX509TrustManager', 'OldTargetApi', 'GradleDependency',
+                    'AndroidGradlePluginVersion', 'IconLauncherShape', 'MonochromeLauncherIcon', 'UsableSpace', 'UseRequiresApi']
+    }
+}
+
+// 纯 Java 实现，无任何第三方依赖
+dependencies {
+}

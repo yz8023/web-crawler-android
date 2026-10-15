@@ -1,0 +1,12 @@
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+.cxx/
+# 签名文件请自行妥善保管，不要上传到公开仓库
+keystore.properties
+keystore/
+*.jks
+*.keystore
